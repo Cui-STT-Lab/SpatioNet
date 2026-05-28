@@ -1,14 +1,26 @@
 # SpatioNet
 
-SpatioNet is a spatial transcriptomics framework for reference-free deconvolution using gene-network priors and spatial regularization. It combines network-informed topic modeling with spatial smoothing to recover spatial topic weights and gene-topic profiles without requiring an external single-cell reference.
+**SpatioNet** is a reference-free deconvolution framework for spatial transcriptomics data. It estimates spatially resolved topic/cell-type proportions and gene-topic profiles directly from spatial gene expression data, without requiring an external single-cell RNA-seq reference.
+
+SpatioNet integrates **gene-network priors** with **spatial regularization** to encourage biologically meaningful gene-topic structure and spatially coherent topic patterns across neighboring tissue locations.
 
 ## Highlights
 
-- Reference-free deconvolution for spatial transcriptomics
-- Gene-network priors to regularize gene-topic relationships
-- Spatial smoothing via ADMM regularization on spatial priors
-- Output-ready topic weights and gene-topic matrices for downstream analysis
+- **Reference-free spatial deconvolution**  
+  Estimates latent cell-type/topic proportions without relying on an external single-cell reference.
 
+- **Gene-network-guided modeling**  
+  Incorporates gene-gene network information to improve the biological structure and interpretability of gene-topic profiles.
+
+- **Spatially regularized topic weights**  
+  Encourages neighboring spots to have coherent topic compositions while preserving local tissue heterogeneity.
+
+- **ADMM-based optimization**  
+  Uses an efficient optimization framework to estimate spatial topic weights and gene-topic distributions under network and spatial constraints.
+
+- **Downstream-ready outputs**  
+  Provides estimated topic weights and gene-topic matrices for visualization, clustering, marker interpretation, and downstream spatial analysis.
+  
 ## Installation
 
 Install the repository in editable mode:
@@ -19,30 +31,122 @@ cd SpatioNet
 pip install -e .
 ```
 
-## Quick Start
+## Dependencies
 
-Train SpatioNet on your processed spatial transcriptomics data using the provided Python API. The model learns:
+```python
+import pandas as pd
+import numpy as np
+import os
+import logging
+import pickle
+```
 
-- spatial topic weights (`gamma`)
-- topic-gene associations (`beta`)
-- an optional saved topic model object
+## Run SpatioNet with MPOA Data
 
-Outputs are written to a user-defined directory for analysis and visualization.
+### Data Loading and Preprocessing
+
+The SpatioNet workflow starts by loading spatial transcriptomics data, gene network information, and spatial neighborhood graphs.
+
+```python
+from spationet.model.model import train
+
+# Load feature matrix for all samples (corpus)
+with open('data/raw/mpoa/MPOA_feat.pkl', 'rb') as f:
+    feat = pickle.load(f)
+
+# Load position information
+pos = pd.read_csv('data/raw/mpoa/mpoa_pos.csv', index_col=0)
+
+# Load gene network edges
+gene_edges = pd.read_csv('data/STRING_processed/mpoa/mpoa_gene_network.csv')
+
+# Extract gene network weights
+weight = gene_edges["abs_corr"].to_numpy()
+```
+
+### Load Pre-computed Matrices
+
+SpatioNet requires pre-computed feature matrices and gene networks:
+
+```python
+# Load gene network adjacency matrix
+with open('data/STRING_processed/mpoa/mpoa_gene_network.pkl', 'rb') as f:
+    M = pickle.load(f)
+
+# Load spatial difference matrices for spatial regularization
+with open('data/spatial_processed/mpoa_diff.pkl', 'rb') as f:
+    diff_matrix = pickle.load(f)
+```
+
+### Model Training
+
+Train the SpatioNet model with graph regularization:
+
+```python
+# Set number of topics (cell types)
+n_topics = 12
+
+# Train SpatioNet model
+lda = train(
+    sample_features=feat,
+    difference_matrices=diff_matrix,
+    difference_penalty=10,
+    M=M,
+    weight=weight,
+    n_topics=n_topics,
+    n_iters=2,
+    max_lda_iter=100,
+    max_admm_iter=15,
+    n_parallel_processes=8,
+    save=True,
+    output_dir="example/output/mpoa",
+)
+```
+
+### Extract and Save Results
+
+Extract topic-gene associations and spatial topic weights:
+
+```python
+# Extract results from trained model
+beta = lda.components_.copy()
+gamma = lda._unnormalized_transform(feat)
+
+# Create result DataFrames
+columns = [f"Topic-{i}" for i in range(n_topics)]
+gamma_df = pd.DataFrame(gamma, index=feat.index, columns=columns)
+beta_df = pd.DataFrame(lda.components_, columns=feat.columns, index=columns)
+
+lda.topic_weights = gamma_df
+
+# Save outputs
+PATH_TO_MODELS = "example/output/mpoa"
+os.makedirs(PATH_TO_MODELS, exist_ok=True)
+
+# Save model
+with open(f"{PATH_TO_MODELS}/model_topics={n_topics}.pkl", "wb") as f:
+    pickle.dump(lda, f)
+
+# Save spatial topic weights (gamma)
+gamma_df.to_csv(f"{PATH_TO_MODELS}/gamma_topics={n_topics}.csv", index=True)
+
+# Save topic-gene associations (beta)
+beta_df.to_csv(f"{PATH_TO_MODELS}/beta_topics={n_topics}.csv", index=True)
+```
 
 ## Example Outputs
 
-### Spatial topic concordance
+### Cell type composition
 
 ![Spatial plot](example/output/mpoa/theta_PCC.png)
 
-### Topic-gene structure
+### Cell type gene profiles
 
 ![Topic heatmap](example/output/mpoa/beta_topics=12.png)
 
-### Brain-region reference overview
+### Spatially cell type distribution
 
 ![Bregma overview](figures/bregma.png)
-
 ## Output Files
 
 Typical outputs include:
