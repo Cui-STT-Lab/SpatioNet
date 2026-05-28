@@ -30,7 +30,7 @@ The SpatioNet workflow begins by loading processed spatial transcriptomics featu
 ```python
 from spationet.model.model import train
 
-PATH_TO_DATA = '/Users/phuong/Library/CloudStorage/OneDrive-MichiganStateUniversity/2. SpatioNet/data/'
+PATH_TO_DATA = '../data/'
 
 with open(f'{PATH_TO_DATA}/raw/mpoa/MPOA_feat.pkl', 'rb') as f:
     feat = pickle.load(f)
@@ -71,31 +71,27 @@ lda = train(
 SpatioNet saves the trained model, topic weights, and topic-word matrix into the output directory.
 
 ```python
-PATH_TO_MODELS = '/Users/phuong/Library/CloudStorage/OneDrive-MichiganStateUniversity/2. SpatioNet/example/output/mpoa'
+PATH_TO_MODELS = '../example/output/mpoa'
 
 # model: saved as model_topics={n_topics}.pkl
 # gamma: saved as gamma_topics={n_topics}.csv
 # beta: saved as beta_topics={n_topics}.csv
 ```
 
-### Inference
+### Results Extraction and Evaluation
 
-After training, you can infer new spatial topic weights from learned components:
+SpatialCD extracts deconvolution results, computes evaluation metrics, and saves them to the defined output path:
 
 ```python
-from spationet.model.model import infer
-
-inferred = infer(
-    components=lda.components_,
-    sample_features=feat,
-    difference_matrices=diff_matrix,
-    difference_penalty=1.0,
-    max_admm_iter=15,
-    n_parallel_processes=8,
-)
-
-print(inferred.topic_weights.head())
+PATH_TO_MODELS = '../example/output/mpoa/'
+save_results(spatialcd_model, n_topics, n_neighbors, corpus, PATH_TO_MODELS)
 ```
+
+The output figures can be viewed in the repository or output directory:
+
+![Spatial plot](example/output/mpoa/theta_PCC.png)
+
+![Heatmap plot](figures/bregma.png)
 
 ## Key Features
 

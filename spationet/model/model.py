@@ -54,7 +54,7 @@ import numpy as np
 import pandas as pd
 
 from .online_lda import LatentDirichletAllocation
-from ..network.update_priors import _update_xis, _update_nis
+from ..network.update_priors import _update_xis, _update_ni_weight
 
 
 def _make_output_path(
@@ -69,6 +69,9 @@ def _make_output_path(
     """Create a standardized output file path."""
     filename = (
         f"{prefix}"
+        f"_n_outer_iters={n_outer_iters}"
+        f"_n_iters={n_iters}"
+        f"_penalty={difference_penalty}"
         f"_topics={n_topics}"
         f".{extension}"
     )
@@ -95,13 +98,13 @@ def train(
     M: Any,
     weight: np.ndarray,
     n_topics: int,
-    difference_penalty: float = 0.25,
+    difference_penalty: float = 1.0,
     max_primal_dual_iter: int = 400,
     max_dirichlet_iter: int = 20,
     max_dirichlet_ls_iter: int = 10,
     max_lda_iter: int = 100,
     max_admm_iter: int = 15,
-    n_outer_iters: int = 2,
+    n_outer_iters: int = 1,
     n_iters: int = 3,
     n_parallel_processes: int = 1,
     verbosity: int = 1,
@@ -114,7 +117,7 @@ def train(
     mean_change_tol: float = 1e-6,
     doc_topic_prior_init: Optional[float] = None,
     topic_word_prior_init: float = 1.0,
-    warm_start_method: str = "partial_fit",
+    warm_start_method: str = "fit",
     output_dir: str = "./",
     save: bool = True,
 ) -> LatentDirichletAllocation:
@@ -223,125 +226,113 @@ def train(
     gamma = lda._unnormalized_transform(X)
     beta = lda.components_.copy()
 
-    for outer_iter in range(n_outer_iters):
-        # print(f'\n===== Outer refinement iteration {outer_iter + 1}/{n_outer_iters} =====')
+    # ------------------------------------------------------------
+    # Stage 1: spatial xi/document-topic prior update
+    # ------------------------------------------------------------
+    for i in range(n_iters):
+        logging.info(">>> Starting xi iteration %s", i + 1)
+        print(f">>> Update Xis iteration {i + 1}")
 
-        # ------------------------------------------------------------
-        # Stage 1: spatial xi/document-topic prior update
-        # ------------------------------------------------------------
-        for i in range(n_iters):
-            logging.info(">>> Starting xi iteration %s", i + 1)
-            print(f">>> Update Xis iteration {i + 1}")
+        xis = _update_xis(
+            sample_features=sample_features,
+            difference_matrices=difference_matrices,
+            difference_penalty=difference_penalty,
+            gamma=gamma,
+            n_parallel_processes=n_parallel_processes,
+            max_iter=max_admm_iter,
+            max_primal_dual_iter=max_primal_dual_iter,
+            max_dirichlet_iter=max_dirichlet_iter,
+            max_dirichlet_ls_iter=max_dirichlet_ls_iter,
+            verbosity=verbosity,
+            primal_dual_mu=primal_dual_mu,
+            admm_rho=admm_rho,
+            primal_tol=primal_tol,
+            threshold=threshold,
+        )
 
-            xis = _update_xis(
-                sample_features=sample_features,
-                difference_matrices=difference_matrices,
-                difference_penalty=difference_penalty,
-                gamma=gamma,
-                n_parallel_processes=n_parallel_processes,
-                max_iter=max_admm_iter,
-                max_primal_dual_iter=max_primal_dual_iter,
-                max_dirichlet_iter=max_dirichlet_iter,
-                max_dirichlet_ls_iter=max_dirichlet_ls_iter,
-                verbosity=verbosity,
-                primal_dual_mu=primal_dual_mu,
-                admm_rho=admm_rho,
-                primal_tol=primal_tol,
-                threshold=threshold,
-            )
+        print(f">>> Warm Update LDA after xi refinement {i + 1}")
 
-            print(f">>> Warm Update LDA after xi refinement {i + 1}")
+        lda.set_components(beta)
+        lda.doc_topic_prior = xis
+        lda.fit(X)
 
-            lda.set_components(beta)
-            lda.doc_topic_prior = xis
+        delta = np.linalg.norm(lda.components_ - beta) / max(np.linalg.norm(beta), 1e-12)
+        print(f"    >> LDA beta change after xi refinement: {delta:.6f}")
 
-            if warm_start_method == "partial_fit":
-                lda.partial_fit(X)
-            else:
-                lda.fit(X)
+        beta = lda.components_.copy()
+        gamma = lda._unnormalized_transform(X)
 
-            delta = np.linalg.norm(lda.components_ - beta) / max(np.linalg.norm(beta), 1e-12)
-            print(f"    >> LDA beta change after xi refinement: {delta:.6f}")
+    gamma = lda.fit_transform(X)
 
-            beta = lda.components_.copy()
-            gamma = lda._unnormalized_transform(X)
+    # ------------------------------------------------------------
+    # Stage 2: gene-network ni/topic-word prior update
+    # ------------------------------------------------------------
+    for i in range(n_iters):
+        logging.info(">>> Starting ni iteration %s", i + 1)
+        print(f">>> Update Nis iteration {i + 1}")
 
-        # ------------------------------------------------------------
-        # Stage 2: gene-network ni/topic-word prior update
-        # ------------------------------------------------------------
-        for i in range(n_iters):
-            logging.info(">>> Starting ni iteration %s", i + 1)
-            print(f">>> Update Nis iteration {i + 1}")
+        nis = _update_ni_weight(
+            counts=beta,
+            diff_matrix=M,
+            weight=weight,
+            sample_id="all",
+            max_iter=max_admm_iter,
+            max_primal_dual_iter=max_primal_dual_iter,
+            max_dirichlet_iter=max_dirichlet_iter,
+            max_dirichlet_ls_iter=max_dirichlet_ls_iter,
+            verbosity=verbosity,
+            rho=admm_rho,
+            mu=primal_dual_mu,
+            primal_tol=primal_tol,
+            threshold=threshold,
+        )
 
-            nis = _update_nis(
-                beta=beta,
-                M=M,
-                weight=weight,
-                sample_id="all",
-                max_iter=max_admm_iter,
-                max_primal_dual_iter=max_primal_dual_iter,
-                max_dirichlet_iter=max_dirichlet_iter,
-                max_dirichlet_ls_iter=max_dirichlet_ls_iter,
-                verbosity=verbosity,
-                rho=admm_rho,
-                mu=primal_dual_mu,
-                primal_tol=primal_tol,
-                threshold=threshold,
-            )
+        print(f">>> Warm Update LDA after ni refinement {i + 1}")
 
-            print(f">>> Warm Update LDA after ni refinement {i + 1}")
+        lda.set_components(beta)
+        lda.topic_word_prior = nis
+        lda.fit(X)
 
-            lda.set_components(beta)
-            lda.topic_word_prior = nis
+        delta = np.linalg.norm(lda.components_ - beta) / max(np.linalg.norm(beta), 1e-12)
+        print(f"    >> LDA beta change after ni refinement: {delta:.6f}")
 
-            if warm_start_method == "partial_fit":
-                lda.partial_fit(X)
-            else:
-                lda.fit(X)
-
-            delta = np.linalg.norm(lda.components_ - beta) / max(np.linalg.norm(beta), 1e-12)
-            print(f"    >> LDA beta change after ni refinement: {delta:.6f}")
-
-            beta = lda.components_.copy()
-            
+        beta = lda.components_.copy()
 
     # ------------------------------------------------------------
     # Final topic weights and outputs
     # ------------------------------------------------------------
-    print(">>> Getting final topic weights")
-    final_gamma = lda.fit_transform(X)
-
-    columns = [f"Topic-{i}" for i in range(n_topics)]
     gamma_df = pd.DataFrame(
-        final_gamma,
-        index=_extract_spot_ids(sample_features.index),
-        columns=columns,
+        gamma,
+        index=[idx[1] for idx in sample_features.index],
     )
-
-    beta_df = pd.DataFrame(
-        lda.components_,
-        columns=sample_features.columns,
-        index=columns,
-    )
-
-    lda.topic_weights = gamma_df
+    beta = lda.components_.copy()
+    beta_df = pd.DataFrame(beta)
 
     if save:
         gamma_path = _make_output_path(
             output_dir=output_dir,
             prefix="gamma",
+            n_outer_iters=n_outer_iters,
+            n_iters=n_iters,
+            difference_penalty=difference_penalty,
             n_topics=n_topics,
             extension="csv",
         )
         beta_path = _make_output_path(
             output_dir=output_dir,
             prefix="beta",
+            n_outer_iters=n_outer_iters,
+            n_iters=n_iters,
+            difference_penalty=difference_penalty,
             n_topics=n_topics,
             extension="csv",
         )
         model_path = _make_output_path(
             output_dir=output_dir,
             prefix="model",
+            n_outer_iters=n_outer_iters,
+            n_iters=n_iters,
+            difference_penalty=difference_penalty,
             n_topics=n_topics,
             extension="pkl",
         )
