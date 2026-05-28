@@ -2,7 +2,7 @@
 
 **SpatioNet** is a reference-free deconvolution framework for spatial transcriptomics data. It estimates spatially resolved topic/cell-type proportions and gene-topic profiles directly from spatial gene expression data, without requiring an external single-cell RNA-seq reference.
 
-SpatioNet integrates **gene-network priors** with **spatial regularization** to encourage biologically meaningful gene-topic structure and spatially coherent topic patterns across neighboring tissue locations.
+SpatioNet integrates **gene-network** and **spatial-network** to encourage biologically meaningful gene-topic structure and spatially coherent topic patterns across neighboring tissue locations.
 
 ## Highlights
 
@@ -57,11 +57,6 @@ with open('data/raw/mpoa/MPOA_feat.pkl', 'rb') as f:
 # Load position information
 pos = pd.read_csv('data/raw/mpoa/mpoa_pos.csv', index_col=0)
 
-# Load gene network edges
-gene_edges = pd.read_csv('data/STRING_processed/mpoa/mpoa_gene_network.csv')
-
-# Extract gene network weights
-weight = gene_edges["abs_corr"].to_numpy()
 ```
 
 ### Load Pre-computed Matrices
@@ -72,6 +67,9 @@ SpatioNet requires pre-computed feature matrices and gene networks:
 # Load gene network adjacency matrix
 with open('data/STRING_processed/mpoa/mpoa_gene_network.pkl', 'rb') as f:
     M = pickle.load(f)
+
+# Extract gene network weights
+weight = pd.read_csv('data/STRING_processed/mpoa/mpoa_gene_network.csv')["abs_corr"].to_numpy()
 
 # Load spatial difference matrices for spatial regularization
 with open('data/spatial_processed/mpoa_diff.pkl', 'rb') as f:
@@ -142,7 +140,7 @@ beta_df.to_csv(f"{PATH_TO_MODELS}/beta_topics={n_topics}.csv", index=True)
 
 ### Cell type gene profiles
 
-![Topic heatmap](example/output/mpoa/beta_topics=12.png)
+![Topic heatmap](example/output/mpoa/beta_PCC.png)
 
 ### Spatially cell type distribution
 
