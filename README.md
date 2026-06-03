@@ -1,25 +1,22 @@
 # SpatioNet
 
-**SpatioNet** is a reference-free deconvolution framework for spatial transcriptomics data. It estimates spatially resolved topic/cell-type proportions and gene-topic profiles directly from spatial gene expression data, without requiring an external single-cell RNA-seq reference.
+**SpatioNet** is a reference-free deconvolution framework for spatial transcriptomics data. It estimates spatially resolved cell type proportions and transcriptional profiles directly from spatial gene expression data, without requiring an external single-cell RNA-seq reference.
 
 SpatioNet integrates **gene-network** and **spatial-network** to encourage biologically meaningful gene-topic structure and spatially coherent topic patterns across neighboring tissue locations.
 
 ## Highlights
 
 - **Reference-free spatial deconvolution**  
-  Estimates latent cell-type/topic proportions without relying on an external single-cell reference.
+  Estimates latent cell-type proportions without relying on an external single-cell reference.
 
 - **Gene-network-guided modeling**  
   Incorporates gene-gene network information to improve the biological structure and interpretability of gene-topic profiles.
 
 - **Spatially regularized topic weights**  
-  Encourages neighboring spots to have coherent topic compositions while preserving local tissue heterogeneity.
-
-- **ADMM-based optimization**  
-  Uses an efficient optimization framework to estimate spatial topic weights and gene-topic distributions under network and spatial constraints.
+  Encourages neighboring spots to have coherent cell type compositions while preserving local tissue heterogeneity.
 
 - **Downstream-ready outputs**  
-  Provides estimated topic weights and gene-topic matrices for visualization, clustering, marker interpretation, and downstream spatial analysis.
+  Provides estimated cell type compositons and transcriptional matrices for visualization, clustering, marker interpretation, and downstream spatial analysis.
   
 ## Installation
 
