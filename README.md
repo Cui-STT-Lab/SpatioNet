@@ -20,7 +20,11 @@ Vo, P. and Y. Cui. Leveraging gene networks for spatially-informed reference-fre
 
 - **Downstream-ready outputs**  
   Provides estimated cell type compositons and transcriptional matrices for visualization, clustering, marker interpretation, and downstream spatial analysis.
-  
+
+## Method Flowchart
+
+![method overview](figures/spationet_overview.png)
+
 ## Installation
 
 Install the repository in editable mode:
@@ -166,14 +170,6 @@ Typical outputs include:
 ## Notes
 
 This README focuses on the model and visual results. Detailed extraction and evaluation workflows are available in the repository notebooks and scripts.
-
-## Citation
-
-If you use SpatioNet in your research, please cite:
-
-```
-Vo, Phuong, and Yuehua Cui. (2026) Leveraging gene networks for spatially-informed reference-free deconvolution in spatial transcriptomics with SpatioNet.
-```
 
 ## License
 
