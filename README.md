@@ -5,7 +5,7 @@
 SpatioNet integrates **gene-network** and **spatial-network** to encourage biologically meaningful gene-topic structure and spatially coherent topic patterns across neighboring tissue locations.
 
 # Reference
-Vo, P. and Y. Cui. Leveraging gene networks for spatially-informed reference-free deconvolution in spatial transcriptomics with SpatioNet.
+Vo, P. and Y. Cui. SpatioNet integrates spatial and gene-network regularization for reference-free deconvolution of spatial transcriptomics.
 
 ## Highlights
 
