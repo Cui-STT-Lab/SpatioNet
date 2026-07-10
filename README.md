@@ -23,7 +23,7 @@ Vo, P. and Y. Cui. SpatioNet integrates spatial and gene-network regularization 
 
 ## Method Flowchart
 
-![method overview](figures/spationet_overview.png)
+![method overview](spationet_overview_image.png)
 
 ## Installation
 
