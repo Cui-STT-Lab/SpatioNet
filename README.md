@@ -30,7 +30,7 @@ regularization for reference-free deconvolution of spatial transcriptomics.
 - **Gene-network-guided topics** — incorporates gene–gene network structure
   to improve biological interpretability of topic–gene profiles (β).
 - **Spatially regularized topic weights** — encourages neighboring spots to
-  have coherent compositions (γ / θ-like weights) while retaining local
+  have coherent compositions (θ) while retaining local
   heterogeneity.
 - **Downstream-ready outputs** — returns topic weights and transcriptional
   matrices for visualization, clustering, marker interpretation, and
@@ -41,7 +41,7 @@ regularization for reference-free deconvolution of spatial transcriptomics.
 ![SpatioNet method overview](SpatioNet_overview_image.png)
 
 SpatioNet fits an LDA model and iteratively updates Dirichlet priors using
-the spatial difference matrices (document–topic prior ξ) and the gene
+the spatial difference matrices (document–topic prior \alpha) and the gene
 network (topic–word prior η), then warm-starts LDA with the refined
 priors.
 
