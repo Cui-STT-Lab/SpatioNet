@@ -145,17 +145,11 @@ A notebook walkthrough is in `tests/test_on_mpoa.ipynb`.
 
 ## Example outputs
 
-### Cell-type composition (θ / topic weights)
+**(A)** cell-type composition (θ / topic weights), **(B)** cell-type gene
+profiles (β), and **(C)** spatial cell-type distribution across bregma
+sections.
 
-![Spatial topic-weight PCC](example/output/mpoa/theta_PCC.png)
-
-### Cell-type gene profiles (β)
-
-![Topic–gene PCC](example/output/mpoa/beta_PCC.png)
-
-### Spatial cell-type distribution across bregma sections
-
-![Bregma overview](figures/bregma.png)
+![SpatioNet example outputs — panels A–C](figures/example_outputs_panels.png)
 
 ## Output files
 
