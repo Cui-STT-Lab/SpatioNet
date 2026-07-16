@@ -149,7 +149,7 @@ A notebook walkthrough is in `tests/test_on_mpoa.ipynb`.
 profiles (β), and **(C)** spatial cell-type distribution across bregma
 sections.
 
-![SpatioNet example outputs — panels A–C](figures/example_outputs_panels.png)
+![SpatioNet example outputs — panels A–C](figures/GitHub-MPOA-SpatioNet.png)
 
 ## Output files
 
